@@ -1,5 +1,5 @@
 <?php
-namespace Create_WordPress_Plugin\Tests;
+namespace Cache_Collector\Tests;
 
 /**
  * Visit {@see https://mantle.alley.co/testing/test-framework.html} to learn more.

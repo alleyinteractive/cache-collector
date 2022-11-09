@@ -1,6 +1,6 @@
 <?php
 /**
- * create-wordpress-plugin Test Bootstrap
+ * cache-collector Test Bootstrap
  */
 
 /**

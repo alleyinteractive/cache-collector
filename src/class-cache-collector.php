@@ -165,7 +165,38 @@ class Cache_Collector {
 	 * @return static
 	 */
 	public function purge() {
-		// ...
+		$keys = $this->keys();
+
+		if ( empty( $keys ) ) {
+			return $this;
+		}
+
+		$dirty = false;
+
+		foreach ( $keys as $index => $data ) {
+			[ $key, $cache_group ] = explode( static::DELIMITER, $index );
+			[ $expiration, $type ] = $data;
+
+			// Check if the key is expired and should be removed.
+			if ( $expiration && $expiration < time() ) {
+				unset( $keys[ $index ] );
+				continue;
+			}
+
+			// Purge the cache.
+			if ( self::CACHE_OBJECT_CACHE === $type ) {
+				wp_cache_delete( $key, $cache_group );
+			} elseif ( self::CACHE_TRANSIENT === $type ) {
+				delete_transient( $key );
+			}
+		}
+
+		// Update the keys if any were removed.
+		if ( $dirty ) {
+			update_option( $this->get_storage_name(), $keys );
+		}
+
+		return $this;
 	}
 
 	/**
@@ -174,6 +205,6 @@ class Cache_Collector {
 	 * @return string
 	 */
 	public function get_storage_name(): string {
-		return "cache-collector-{$this->collection}";
+		return "_ccollection_{$this->collection}";
 	}
 }

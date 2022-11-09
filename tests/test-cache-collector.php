@@ -129,7 +129,23 @@ class Cache_Collector_Test extends Test_Case {
 		$this->assertGreaterThan( time() - Cache_Collector::$threshold, $instance->keys()['example-key_:_'] );
 	}
 
-	// public function test_purge() {}
+	public function test_purge() {
+		wp_cache_set( 'example-key', 'value', 'cache-group' );
+
+		$this->assertNotEmpty( wp_cache_get( 'example-key', 'cache-group' ) );
+
+		$instance = new Cache_Collector( __FUNCTION__ );
+
+		$instance->register( 'example-key', 'cache-group' );
+
+		$instance->save();
+
+		$this->assertNotEmpty( $instance->keys() );
+
+		$instance->purge();
+
+		$this->assertEmpty( wp_cache_get( 'example-key', 'cache-group' ) );
+	}
 
 	// public function test_for_post() {}
 

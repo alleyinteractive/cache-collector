@@ -36,6 +36,13 @@ class Cache_Collector {
 	public const DELIMITER = '_:_';
 
 	/**
+	 * Prefix for the cache key.
+	 *
+	 * @var string
+	 */
+	public const STORAGE_PREFIX = '_ccollection_';
+
+	/**
 	 * Threshold in seconds for purging the cache related to a post when a post
 	 * is updated.
 	 *
@@ -103,18 +110,40 @@ class Cache_Collector {
 			return;
 		}
 
-		$threshold = self::$post_update_threshold;
+		$threshold = static::$post_update_threshold;
 
 		/**
 		 * Filter the threshold for cache key expiration.
 		 *
 		 * @param int $threshold Threshold in seconds.
 		 */
-		$threshold = apply_filters( 'cache_collector_post_threshold', $threshold, $post_id );
+		$threshold = (int) apply_filters( 'cache_collector_post_threshold', $threshold, $post_id );
 
 		// If the post is newer than the threshold, purge the cache.
 		if ( get_the_date( 'U', $post ) > ( time() - $threshold ) ) {
 			static::for_post( $post )->purge();
+		}
+	}
+
+	/**
+	 * Cleanup the cache collector options stored in the database.
+	 *
+	 * @return void
+	 */
+	public static function cleanup() {
+		global $wpdb;
+
+		// Retrieve all options that start with the cache collector prefix.
+		$keys = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->prepare(
+				"SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+				$wpdb->esc_like( static::STORAGE_PREFIX ) . '%'
+			)
+		);
+
+		// Run save() on each to remove the expired keys.
+		foreach ( $keys as $key ) {
+			( new static( substr( $key, strlen( static::STORAGE_PREFIX ) ) ) )->save();
 		}
 	}
 
@@ -184,7 +213,11 @@ class Cache_Collector {
 			}
 		}
 
-		update_option( $this->get_storage_name(), $keys );
+		if ( ! empty( $keys ) ) {
+			update_option( $this->get_storage_name(), $keys );
+		} else {
+			delete_option( $this->get_storage_name() );
+		}
 
 		// Reset the pending keys.
 		$this->pending_keys = [];
@@ -247,6 +280,6 @@ class Cache_Collector {
 	 * @return string
 	 */
 	public function get_storage_name(): string {
-		return "_ccollection_{$this->collection}";
+		return static::STORAGE_PREFIX . $this->collection;
 	}
 }

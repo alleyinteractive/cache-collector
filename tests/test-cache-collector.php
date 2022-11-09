@@ -270,4 +270,25 @@ class Cache_Collector_Test extends Test_Case {
 
 		$this->assertEmpty( wp_cache_get( 'term-update-key', 'cache-group' ) );
 	}
+
+	public function test_cron_job_registered() {
+		$this->assertInCronQueue( 'cache_collector_cleanup' );
+	}
+
+	public function test_cleanup_old_keys() {
+		$instance = new Cache_Collector( __FUNCTION__ );
+
+		update_option(
+			$instance->get_storage_name(),
+			[
+				'example-key_:_' => [ time() - Cache_Collector::$expiration_threshold - 1000, 'cache' ],
+			]
+		);
+
+		$this->assertNotEmpty( get_option( $instance->get_storage_name() ) );
+
+		$instance->cleanup();
+
+		$this->assertFalse( get_option( $instance->get_storage_name() ) );
+	}
 }

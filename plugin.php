@@ -36,5 +36,13 @@ function main() {
 	add_action( 'delete_post', fn ( $post_id ) => Cache_Collector::on_post_update( $post_id ) );
 	add_action( 'edit_term', fn ( $term_id ) => Cache_Collector::for_term( $term_id )->purge() );
 	add_action( 'delete_term', fn ( $term_id ) => Cache_Collector::for_term( $term_id )->purge() );
+
+	// Setup a cleanup task that runs once a day to cleanup any expired keys and
+	// delete any unused options.
+	if ( ! wp_next_scheduled( 'cache_collector_cleanup' ) ) {
+		wp_schedule_event( time(), 'daily', 'cache_collector_cleanup' );
+	}
+
+	add_action( 'cache_collector_cleanup', fn () => Cache_Collector::cleanup() );
 }
 main();

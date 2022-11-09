@@ -18,6 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/src/class-cache-collector.php';
+
 /**
  * Instantiate the plugin.
  */

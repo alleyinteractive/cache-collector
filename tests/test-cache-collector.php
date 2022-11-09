@@ -19,7 +19,7 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys() );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys( true ) );
 		$this->assertCount( 1, $instance->keys() );
 	}
 
@@ -38,9 +38,9 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys() );
-		$this->assertArrayHasKey( 'example-key-2_:_', $instance->keys() );
-		$this->assertArrayHasKey( 'example-key-3_:_cache-group', $instance->keys() );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys( true ) );
+		$this->assertContains( [ 'example-key-2', '' ], $instance->keys( true ) );
+		$this->assertContains( [ 'example-key-3', 'cache-group' ], $instance->keys( true ) );
 		$this->assertCount( 3, $instance->keys() );
 	}
 
@@ -62,9 +62,9 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys() );
-		$this->assertArrayHasKey( 'example-key-2_:_', $instance->keys() );
-		$this->assertArrayHasKey( 'example-key-3_:_cache-group', $instance->keys() );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys( true ) );
+		$this->assertContains( [ 'example-key-2', '' ], $instance->keys( true ) );
+		$this->assertContains( [ 'example-key-3', 'cache-group' ], $instance->keys( true ) );
 		$this->assertCount( 3, $instance->keys() );
 	}
 
@@ -104,7 +104,7 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'another-key_:_', $instance->keys() );
+		$this->assertContains( [ 'another-key', '' ], $instance->keys( true ) );
 		$this->assertCount( 1, $instance->keys() );
 	}
 
@@ -144,7 +144,7 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys() );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys( true ) );
 	}
 
 	public function test_key_saved_on_destruct() {
@@ -231,7 +231,7 @@ class Cache_Collector_Test extends Test_Case {
 		$post_id = static::factory()->post->create(
 			[
 				'post_date' => date( 'Y-m-d H:i:s', time() - YEAR_IN_SECONDS ),
-			] 
+			]
 		);
 
 		wp_cache_set( 'post-update-key', 'value', 'cache-group' );
@@ -331,6 +331,6 @@ class Cache_Collector_Test extends Test_Case {
 
 		$this->assertNotEmpty( get_option( $instance->get_storage_name() ) );
 		$this->assertCount( 1, $instance->keys() );
-		$this->assertArrayHasKey( 'valid-key_:_', $instance->keys() );
+		$this->assertContains( [ 'valid-key', '' ], $instance->keys( true ) );
 	}
 }

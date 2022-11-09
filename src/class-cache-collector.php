@@ -228,10 +228,21 @@ class Cache_Collector {
 	/**
 	 * Retrieve all the stored keys for the collector group.
 	 *
+	 * @param bool $split Whether to split up the keys into an array of arrays.
+	 *                    Returns an array of arrays with the key and group.
 	 * @return array[]
 	 */
-	public function keys() {
-		return (array) get_option( $this->get_storage_name(), [] );
+	public function keys( bool $split = false ): array {
+		$keys = (array) get_option( $this->get_storage_name(), [] );
+
+		if ( $split ) {
+			$keys = array_map(
+				fn( $key ) => explode( static::DELIMITER, $key ),
+				array_keys( $keys ),
+			);
+		}
+
+		return $keys;
 	}
 
 	/**

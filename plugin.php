@@ -40,7 +40,7 @@ function main() {
 	// Setup a cleanup task that runs once a day to cleanup any expired keys and
 	// delete any unused options.
 	if ( ! wp_next_scheduled( 'cache_collector_cleanup' ) ) {
-		wp_schedule_event( time(), 'daily', 'cache_collector_cleanup' );
+		wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'cache_collector_cleanup' );
 	}
 
 	add_action( 'cache_collector_cleanup', fn () => Cache_Collector::cleanup() );

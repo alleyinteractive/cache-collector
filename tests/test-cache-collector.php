@@ -147,7 +147,83 @@ class Cache_Collector_Test extends Test_Case {
 		$this->assertEmpty( wp_cache_get( 'example-key', 'cache-group' ) );
 	}
 
-	// public function test_for_post() {}
+	public function test_for_post() {
+		$post_id = static::factory()->post->create();
 
-	// public function test_for_term() {}
+		wp_cache_set( 'post-example-key', 'value', 'cache-group' );
+
+		$this->assertNotEmpty( wp_cache_get( 'post-example-key', 'cache-group' ) );
+
+		$instance = Cache_Collector::for_post( $post_id );
+
+		$instance->register( 'post-example-key', 'cache-group' );
+
+		$instance->save();
+
+		$this->assertNotEmpty( $instance->keys() );
+
+		$instance->purge();
+
+		$this->assertEmpty( wp_cache_get( 'post-example-key', 'cache-group' ) );
+	}
+
+	public function test_for_post_on_post_update() {
+		$post_id = static::factory()->post->create();
+
+		wp_cache_set( 'post-update-key', 'value', 'cache-group' );
+
+		$this->assertNotEmpty( wp_cache_get( 'post-update-key', 'cache-group' ) );
+
+		$instance = Cache_Collector::for_post( $post_id );
+
+		$instance->register( 'post-update-key', 'cache-group' );
+
+		$instance->save();
+
+		$this->assertNotEmpty( $instance->keys() );
+
+		wp_update_post( [ 'ID' => $post_id, 'post_title' => 'Updated Title' ] );
+
+		$this->assertEmpty( wp_cache_get( 'post-update-key', 'cache-group' ) );
+	}
+
+	public function test_for_term() {
+		$term_id = static::factory()->category->create();
+
+		wp_cache_set( 'term-example-key', 'value', 'cache-group' );
+
+		$this->assertNotEmpty( wp_cache_get( 'term-example-key', 'cache-group' ) );
+
+		$instance = Cache_Collector::for_term( $term_id );
+
+		$instance->register( 'term-example-key', 'cache-group' );
+
+		$instance->save();
+
+		$this->assertNotEmpty( $instance->keys() );
+
+		$instance->purge();
+
+		$this->assertEmpty( wp_cache_get( 'term-example-key', 'cache-group' ) );
+	}
+
+	public function test_for_term_on_term_update() {
+		$term_id = static::factory()->category->create();
+
+		wp_cache_set( 'term-update-key', 'value', 'cache-group' );
+
+		$this->assertNotEmpty( wp_cache_get( 'term-update-key', 'cache-group' ) );
+
+		$instance = Cache_Collector::for_term( $term_id );
+
+		$instance->register( 'term-update-key', 'cache-group' );
+
+		$instance->save();
+
+		$this->assertNotEmpty( $instance->keys() );
+
+		wp_update_term( $term_id, 'category', [ 'name' => 'Updated Name' ] );
+
+		$this->assertEmpty( wp_cache_get( 'term-update-key', 'cache-group' ) );
+	}
 }

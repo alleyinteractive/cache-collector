@@ -12,8 +12,6 @@ use WP_Term;
 
 /**
  * Cache Collector
- *
- * @todo Add logger.
  */
 class Cache_Collector {
 	/**
@@ -57,23 +55,31 @@ class Cache_Collector {
 	/**
 	 * Create a new Cache_Collector instance for a post.
 	 *
-	 * @param WP_Post $post Post object.
-	 * @param array   ...$args Arguments to pass to the constructor.
+	 * @param WP_Post|int $post Post object/ID.
+	 * @param array       ...$args Arguments to pass to the constructor.
 	 * @return static
 	 */
-	public static function for_post( WP_Post $post, array ...$args ): static {
-		return new static( "post-{$post->ID}", ...$args );
+	public static function for_post( WP_Post|int $post, array ...$args ): static {
+		if ( is_int( $post ) ) {
+			return new static( "post-{$post}", ...$args );
+		} else {
+			return new static( "post-{$post->ID}", ...$args );
+		}
 	}
 
 	/**
 	 * Create a new Cache_Collector instance for a term.
 	 *
-	 * @param WP_Term $term Term object.
-	 * @param array   ...$args Arguments to pass to the constructor.
+	 * @param WP_Term|int $term Term object/ID.
+	 * @param array       ...$args Arguments to pass to the constructor.
 	 * @return static
 	 */
-	public static function for_term( WP_Term $term, array ...$args ) {
-		return new static( "term-{$term->term_id}", ...$args );
+	public static function for_term( WP_Term|int $term, array ...$args ) {
+		if ( is_int( $term ) ) {
+			return new static( "term-{$term}", ...$args );
+		} else {
+			return new static( "term-{$term->term_id}", ...$args );
+		}
 	}
 
 	/**

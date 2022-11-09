@@ -48,13 +48,6 @@ class Cache_Collector {
 	public static int $threshold = 432000;
 
 	/**
-	 * Flag if the instance is dirty/modified and needs to be saved.
-	 *
-	 * @var bool
-	 */
-	// protected bool $dirty = false;
-
-	/**
 	 * Keys to be registered with the collector.
 	 *
 	 * @var string[]
@@ -87,22 +80,15 @@ class Cache_Collector {
 	 * Constructor.
 	 *
 	 * @param string $collection Cache collection to attach to.
-	 * @param string $type Type of cache (cache/transient).
 	 */
-	public function __construct(
-		public string $collection,
-		public string $type = self::CACHE_OBJECT_CACHE,
-	) {
-		if ( ! is_array( $collection ) ) {
-			$collection = [ $collection ];
-		}
+	public function __construct( public string $collection ) {
 	}
 
 	/**
 	 * Save the collector on destruct.
 	 */
 	public function __destruct() {
-		if ( $this->is_dirty() ) {
+		if ( ! empty( $this->pending_keys ) ) {
 			$this->save();
 		}
 	}
@@ -110,12 +96,13 @@ class Cache_Collector {
 	/**
 	 * Register a cache key.
 	 *
-	 * @param string $key
-	 * @param string $cache_group Cache group to use, optional.
+	 * @param string $key   Cache key to register.
+	 * @param string $group Cache group to use, optional.
+	 * @param string $type  Type of cache, optional (cache/transient).
 	 * @return static
 	 */
-	public function register( string $key, string $cache_group = '' ) {
-		$this->pending_keys[ "{$key}-{$cache_group}" ] = [ $key, $cache_group ];
+	public function register( string $key, string $group = '', string $type = self::CACHE_OBJECT_CACHE ) {
+		$this->pending_keys[ "{$key}-{$group}" ] = [ $key, $group, $type ];
 
 		return $this;
 	}
@@ -128,8 +115,9 @@ class Cache_Collector {
 	public function save() {
 		$keys = $this->keys();
 
-		foreach ( $keys as $index => $key ) {
-			[ $key, $cache_group, $expiration ] = $key;
+		foreach ( $keys as $index => $data ) {
+			[ $key, $cache_group ] = explode( static::DELIMITER, $index );
+			[ $expiration ]        = $data;
 
 			// Check if the key is expired and should be removed.
 			if ( $expiration && $expiration < time() ) {
@@ -140,14 +128,17 @@ class Cache_Collector {
 
 		// Append the pending keys to the existing keys.
 		foreach ( $this->pending_keys as $key ) {
-			[ $key, $cache_group ] = $key;
+			[ $key, $cache_group, $type ] = $key;
 
 			// Check if the key is already registered.
 			if ( isset( $keys[ $key . static::DELIMITER . $cache_group ] ) ) {
 				// Update the expiration if the key is already registered.
-				$keys[ $key . static::DELIMITER . $cache_group ] = time() + static::$threshold;
+				$keys[ $key . static::DELIMITER . $cache_group ][0] = time() + static::$threshold;
 			} else {
-				$keys[ $key . static::DELIMITER . $cache_group ] = time() + static::$threshold;
+				$keys[ $key . static::DELIMITER . $cache_group ] = [
+					time() + static::$threshold,
+					$type,
+				];
 			}
 		}
 
@@ -155,6 +146,8 @@ class Cache_Collector {
 
 		// Reset the pending keys.
 		$this->pending_keys = [];
+
+		return $this;
 	}
 
 	/**
@@ -166,11 +159,13 @@ class Cache_Collector {
 		return (array) get_option( $this->get_storage_name(), [] );
 	}
 
-	public function purge( string $key ) {}
-
-
-	public function is_dirty(): bool {
-		return ! empty( $this->pending_keys );
+	/**
+	 * Purge the cache in the cache collection for the registered keys.
+	 *
+	 * @return static
+	 */
+	public function purge() {
+		// ...
 	}
 
 	/**
@@ -178,7 +173,7 @@ class Cache_Collector {
 	 *
 	 * @return string
 	 */
-	protected function get_storage_name(): string {
+	public function get_storage_name(): string {
 		return "cache-collector-{$this->collection}";
 	}
 }

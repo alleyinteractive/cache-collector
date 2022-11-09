@@ -271,6 +271,10 @@ class Cache_Collector {
 		$keys = $this->keys();
 
 		if ( empty( $keys ) ) {
+			if ( $this->logger ) {
+				$this->logger->info( 'No keys to purge for ' . $this->get_storage_name() );
+			}
+
 			return $this;
 		}
 

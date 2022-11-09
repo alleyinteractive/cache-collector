@@ -44,5 +44,12 @@ function main() {
 	}
 
 	add_action( 'cache_collector_cleanup', fn () => Cache_Collector::cleanup() );
+
+	// Register the WP-CLI command.
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		require_once __DIR__ . '/src/class-cli.php';
+
+		\WP_CLI::add_command( 'cache-collector', 'Cache_Collector\CLI' );
+	}
 }
 main();

@@ -12,18 +12,18 @@
  * @package cache-collector
  */
 
-namespace Cache_Collector;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+use Cache_Collector\Cache_Collector;
 
 require_once __DIR__ . '/src/class-cache-collector.php';
 
 /**
  * Instantiate the plugin.
  */
-function main() {
+function cache_collector_setup() {
 	/**
 	 * Filter the threshold for cache key expiration.
 	 *
@@ -52,4 +52,49 @@ function main() {
 		\WP_CLI::add_command( 'cache-collector', 'Cache_Collector\CLI' );
 	}
 }
-main();
+cache_collector_setup();
+
+/**
+ * Register a cache key for a collection.
+ *
+ * @param string $collection Collection name.
+ * @param string $key Cache key.
+ * @return Cache_Collector
+ */
+function cache_collector_register_key( string $collection, string $key ): Cache_Collector {
+	return ( new Cache_Collector( $collection ) )->register( $key );
+}
+
+/**
+ * Register a cache key for a post.
+ *
+ * @param int|\WP_Post $post Post ID or object.
+ * @param string       $collection Collection name.
+ * @param string       $key Cache key.
+ * @return Cache_Collector
+ */
+function cache_collector_register_key_for_post( \WP_Post|int $post, string $collection, string $key ): Cache_Collector {
+	return Cache_Collector::for_post( $post, $collection )->register( $key );
+}
+
+/**
+ * Register a cache key for a term.
+ *
+ * @param int|\WP_Term $term Term ID or object.
+ * @param string       $collection Collection name.
+ * @param string       $key Cache key.
+ * @return Cache_Collector
+ */
+function cache_collector_register_key_for_term( \WP_Term|int $term, string $collection, string $key ): Cache_Collector {
+	return Cache_Collector::for_term( $term, $collection )->register( $key );
+}
+
+/**
+ * Purge a collection.
+ *
+ * @param string $collection Collection name.
+ * @return Cache_Collector
+ */
+function cache_collector_purge( string $collection ): Cache_Collector {
+	return ( new Cache_Collector( $collection ) )->purge();
+}

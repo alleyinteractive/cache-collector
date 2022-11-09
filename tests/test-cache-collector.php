@@ -23,6 +23,16 @@ class Cache_Collector_Test extends Test_Case {
 		$this->assertCount( 1, $instance->keys() );
 	}
 
+	public function test_register_key_helper() {
+		$instance = cache_collector_register_key( __FUNCTION__, 'example-key' );
+
+		$instance->save();
+
+		$this->assertNotEmpty( $instance->keys() );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys( true ) );
+		$this->assertCount( 1, $instance->keys() );
+	}
+
 	public function test_register_multiple_keys() {
 		$instance = new Cache_Collector( __FUNCTION__ );
 

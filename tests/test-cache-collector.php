@@ -74,7 +74,7 @@ class Cache_Collector_Test extends Test_Case {
 		update_option(
 			$instance->get_storage_name(),
 			[
-				'example-key_:_' => [ time() - Cache_Collector::$threshold - 1000, 'cache' ],
+				'example-key_:_' => [ time() - Cache_Collector::$expiration_threshold - 1000, 'cache' ],
 			]
 		);
 
@@ -91,7 +91,7 @@ class Cache_Collector_Test extends Test_Case {
 		update_option(
 			$instance->get_storage_name(),
 			[
-				'example-key_:_' => [ time() - Cache_Collector::$threshold - 1000, 'cache' ],
+				'example-key_:_' => [ time() - Cache_Collector::$expiration_threshold - 1000, 'cache' ],
 			]
 		);
 
@@ -114,7 +114,7 @@ class Cache_Collector_Test extends Test_Case {
 		update_option(
 			$instance->get_storage_name(),
 			[
-				'example-key_:_' => [ time() - Cache_Collector::$threshold + 1000, 'cache' ],
+				'example-key_:_' => [ time() - Cache_Collector::$expiration_threshold + 1000, 'cache' ],
 			]
 		);
 
@@ -126,7 +126,25 @@ class Cache_Collector_Test extends Test_Case {
 
 		$this->assertNotEmpty( $instance->keys() );
 		$this->assertArrayHasKey( 'example-key_:_', $instance->keys() );
-		$this->assertGreaterThan( time() - Cache_Collector::$threshold, $instance->keys()['example-key_:_'] );
+		$this->assertGreaterThan( time() - Cache_Collector::$expiration_threshold, $instance->keys()['example-key_:_'] );
+	}
+
+	public function test_key_saved_on_destruct() {
+		$instance = new Cache_Collector( __FUNCTION__ );
+
+		$this->assertEmpty( $instance->keys() );
+
+		$instance->register( 'example-key' );
+
+		$this->assertEmpty( $instance->keys() );
+
+		$storage_name = $instance->get_storage_name();
+
+		$this->assertEmpty( get_option( $storage_name ) );
+
+		unset( $instance );
+
+		$this->assertNotEmpty( get_option( $storage_name ) );
 	}
 
 	public function test_purge() {
@@ -168,6 +186,8 @@ class Cache_Collector_Test extends Test_Case {
 	}
 
 	public function test_for_post_on_post_update() {
+		$this->expectApplied( 'cache_collector_post_threshold' );
+
 		$post_id = static::factory()->post->create();
 
 		wp_cache_set( 'post-update-key', 'value', 'cache-group' );
@@ -182,9 +202,33 @@ class Cache_Collector_Test extends Test_Case {
 
 		$this->assertNotEmpty( $instance->keys() );
 
-		wp_update_post( [ 'ID' => $post_id, 'post_title' => 'Updated Title' ] );
+		wp_update_post( [ 'ID' => $post_id ] );
 
 		$this->assertEmpty( wp_cache_get( 'post-update-key', 'cache-group' ) );
+	}
+
+	public function test_for_post_older_than_threshold() {
+		$this->expectApplied( 'cache_collector_post_threshold' );
+
+		$post_id = static::factory()->post->create( [
+			'post_date' => date( 'Y-m-d H:i:s', time() - YEAR_IN_SECONDS ),
+		] );
+
+		wp_cache_set( 'post-update-key', 'value', 'cache-group' );
+
+		$this->assertNotEmpty( wp_cache_get( 'post-update-key', 'cache-group' ) );
+
+		$instance = Cache_Collector::for_post( $post_id );
+
+		$instance->register( 'post-update-key', 'cache-group' );
+
+		$instance->save();
+
+		$this->assertNotEmpty( $instance->keys() );
+
+		wp_update_post( [ 'ID' => $post_id ] );
+
+		$this->assertNotEmpty( wp_cache_get( 'post-update-key', 'cache-group' ) );
 	}
 
 	public function test_for_term() {

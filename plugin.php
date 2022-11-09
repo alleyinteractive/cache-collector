@@ -29,11 +29,11 @@ function main() {
 	 *
 	 * @param int $threshold Threshold in seconds.
 	 */
-	Cache_Collector::$threshold = apply_filters( 'cache_collector_threshold', Cache_Collector::$threshold );
+	Cache_Collector::$post_update_threshold = apply_filters( 'cache_collector_threshold', Cache_Collector::$post_update_threshold );
 
 	// Register the post/term purge actions.
-	add_action( 'save_post', fn ( $post_id ) => Cache_Collector::for_post( $post_id )->purge() );
-	add_action( 'delete_post', fn ( $post_id ) => Cache_Collector::for_post( $post_id )->purge() );
+	add_action( 'save_post', fn ( $post_id ) => Cache_Collector::on_post_update( $post_id ) );
+	add_action( 'delete_post', fn ( $post_id ) => Cache_Collector::on_post_update( $post_id ) );
 	add_action( 'edit_term', fn ( $term_id ) => Cache_Collector::for_term( $term_id )->purge() );
 	add_action( 'delete_term', fn ( $term_id ) => Cache_Collector::for_term( $term_id )->purge() );
 }

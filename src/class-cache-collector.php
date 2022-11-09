@@ -43,7 +43,15 @@ class Cache_Collector {
 	 *
 	 * @var int
 	 */
-	public static int $threshold = 432000;
+	public static int $post_update_threshold = 432000;
+
+	/**
+	 * Default threshold for a cache key to expire and be removed from the cache
+	 * collector.
+	 *
+	 * @var integer
+	 */
+	public static int $expiration_threshold = 432000;
 
 	/**
 	 * Keys to be registered with the collector.
@@ -79,6 +87,34 @@ class Cache_Collector {
 			return new static( "term-{$term}", ...$args );
 		} else {
 			return new static( "term-{$term->term_id}", ...$args );
+		}
+	}
+
+	/**
+	 * Handle a post update and purge the cache if the post being updated is
+	 * newer than the threshold.
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	public static function on_post_update( int $post_id ) {
+		$post = get_post( $post_id );
+
+		if ( ! $post ) {
+			return;
+		}
+
+		$threshold = self::$post_update_threshold;
+
+		/**
+		 * Filter the threshold for cache key expiration.
+		 *
+		 * @param int $threshold Threshold in seconds.
+		 */
+		$threshold = apply_filters( 'cache_collector_post_threshold', $threshold, $post_id );
+
+		// If the post is newer than the threshold, purge the cache.
+		if ( get_the_date( 'U', $post ) > ( time() - $threshold ) ) {
+			static::for_post( $post )->purge();
 		}
 	}
 
@@ -139,10 +175,10 @@ class Cache_Collector {
 			// Check if the key is already registered.
 			if ( isset( $keys[ $key . static::DELIMITER . $cache_group ] ) ) {
 				// Update the expiration if the key is already registered.
-				$keys[ $key . static::DELIMITER . $cache_group ][0] = time() + static::$threshold;
+				$keys[ $key . static::DELIMITER . $cache_group ][0] = time() + static::$post_update_threshold;
 			} else {
 				$keys[ $key . static::DELIMITER . $cache_group ] = [
-					time() + static::$threshold,
+					time() + static::$post_update_threshold,
 					$type,
 				];
 			}

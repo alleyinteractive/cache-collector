@@ -7,11 +7,16 @@
 
 namespace Cache_Collector;
 
+use Psr\Log\LoggerInterface;
 use WP_Post;
 use WP_Term;
 
 /**
  * Cache Collector
+ *
+ * @todo Add logger.
+ * @todo Add CLI command.
+ * @todo Add API commands.
  */
 class Cache_Collector {
 	/**
@@ -150,9 +155,13 @@ class Cache_Collector {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $collection Cache collection to attach to.
+	 * @param string               $collection Cache collection to attach to.
+	 * @param LoggerInterface|null $logger Logger to use.
 	 */
-	public function __construct( public string $collection ) {
+	public function __construct(
+		public string $collection,
+		public ?LoggerInterface $logger = null,
+	) {
 	}
 
 	/**
@@ -215,8 +224,16 @@ class Cache_Collector {
 
 		if ( ! empty( $keys ) ) {
 			update_option( $this->get_storage_name(), $keys );
+
+			if ( $this->logger ) {
+				$this->logger->info( 'Saved cache collection option for ' . $this->get_storage_name(), [ 'keys' => $keys ] );
+			}
 		} else {
 			delete_option( $this->get_storage_name() );
+
+			if ( $this->logger ) {
+				$this->logger->info( 'Deleted cache collection option for ' . $this->get_storage_name() );
+			}
 		}
 
 		// Reset the pending keys.
@@ -271,9 +288,41 @@ class Cache_Collector {
 
 			// Purge the cache.
 			if ( self::CACHE_OBJECT_CACHE === $type ) {
-				wp_cache_delete( $key, $cache_group );
+				$deleted = wp_cache_delete( $key, $cache_group );
 			} elseif ( self::CACHE_TRANSIENT === $type ) {
-				delete_transient( $key );
+				$deleted = delete_transient( $key );
+			}
+
+			if ( $this->logger ) {
+				if ( $deleted ) {
+					$this->logger->debug(
+						sprintf(
+							'Purged %s cache key %s in group %s',
+							$type,
+							$key,
+							$cache_group,
+						),
+						[
+							'key'   => $key,
+							'group' => $cache_group,
+							'type'  => $type,
+						]
+					);
+				} else {
+					$this->logger->debug(
+						sprintf(
+							'Failed to purge %s cache key %s in group %s',
+							$type,
+							$key,
+							$cache_group,
+						),
+						[
+							'key'   => $key,
+							'group' => $cache_group,
+							'type'  => $type,
+						]
+					);
+				}
 			}
 		}
 

@@ -1,17 +1,11 @@
 # cache-collector
 
 Stable tag: 0.1.0
-
-Requires at least: 5.9
-
-Tested up to: 5.9
-
-Requires PHP: 7.4
-
+Requires at least: 6.0
+Tested up to: 6.0
+Requires PHP: 8.0
 License: GPL v2 or later
-
 Tags: alleyinteractive, cache-collector
-
 Contributors: srtfisher
 
 [![Coding Standards](https://github.com/alleyinteractive/cache-collector/actions/workflows/coding-standards.yml/badge.svg)](https://github.com/alleyinteractive/cache-collector/actions/workflows/coding-standards.yml)
@@ -46,24 +40,6 @@ happen when running development or production builds.
 
 Run `composer test` to run tests against PHPUnit and the PHP code in the plugin.
 
-## Updating Dependencies
-
-To update `@wordpress` dependencies, simply execute:
-
-```sh
-npm run update-dependencies WPVERSION
-```
-
-Where `WPVERSION` is the version of WordPress you are targeting. The version
-must include both the major and patch version (e.g., `5.9.3`). For example:
-
-```sh
-npm run update-dependencies 5.9.3
-```
-
-The versions are drawn from tags on
-[wordpress-develop](https://github.com/WordPress/wordpress-develop/tags).
-
 ## Changelog
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
@@ -74,7 +50,7 @@ This project is actively maintained by [Alley
 Interactive](https://github.com/alleyinteractive). Like what you see? [Come work
 with us](https://alley.co/careers/).
 
-- [Sean Fisher](https://github.com/Sean Fisher)
+- [Sean Fisher](https://github.com/srtfisher)
 - [All Contributors](../../contributors)
 
 ## License

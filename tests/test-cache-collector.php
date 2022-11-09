@@ -129,6 +129,24 @@ class Cache_Collector_Test extends Test_Case {
 		$this->assertGreaterThan( time() - Cache_Collector::$expiration_threshold, $instance->keys()['example-key_:_'] );
 	}
 
+	public function test_item_preserved_when_saved() {
+		$instance = new Cache_Collector( __FUNCTION__ );
+
+		update_option(
+			$instance->get_storage_name(),
+			[
+				'example-key_:_' => [ time() + 1000, 'cache' ],
+			]
+		);
+
+		$this->assertNotEmpty( $instance->keys() );
+
+		$instance->save();
+
+		$this->assertNotEmpty( $instance->keys() );
+		$this->assertArrayHasKey( 'example-key_:_', $instance->keys() );
+	}
+
 	public function test_key_saved_on_destruct() {
 		$instance = new Cache_Collector( __FUNCTION__ );
 
@@ -210,9 +228,11 @@ class Cache_Collector_Test extends Test_Case {
 	public function test_for_post_older_than_threshold() {
 		$this->expectApplied( 'cache_collector_post_threshold' );
 
-		$post_id = static::factory()->post->create( [
-			'post_date' => date( 'Y-m-d H:i:s', time() - YEAR_IN_SECONDS ),
-		] );
+		$post_id = static::factory()->post->create(
+			[
+				'post_date' => date( 'Y-m-d H:i:s', time() - YEAR_IN_SECONDS ),
+			] 
+		);
 
 		wp_cache_set( 'post-update-key', 'value', 'cache-group' );
 
@@ -290,5 +310,27 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->cleanup();
 
 		$this->assertFalse( get_option( $instance->get_storage_name() ) );
+	}
+
+	public function test_cleanup_preserve_valid_keys() {
+		$instance = new Cache_Collector( __FUNCTION__ );
+
+		update_option(
+			$instance->get_storage_name(),
+			[
+				// One expired key to purge and one valid to key to preserve.
+				'expired_:_'   => [ time() - Cache_Collector::$expiration_threshold - 1000, 'cache' ],
+				'valid-key_:_' => [ time() + 1000, 'cache' ],
+			]
+		);
+
+		$this->assertNotEmpty( get_option( $instance->get_storage_name() ) );
+		$this->assertCount( 2, $instance->keys() );
+
+		$instance->save();
+
+		$this->assertNotEmpty( get_option( $instance->get_storage_name() ) );
+		$this->assertCount( 1, $instance->keys() );
+		$this->assertArrayHasKey( 'valid-key_:_', $instance->keys() );
 	}
 }

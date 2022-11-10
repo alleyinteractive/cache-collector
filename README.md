@@ -1,11 +1,17 @@
 # cache-collector
 
 Stable tag: 0.1.0
+
 Requires at least: 6.0
+
 Tested up to: 6.0
+
 Requires PHP: 8.0
+
 License: GPL v2 or later
+
 Tags: alleyinteractive, cache-collector
+
 Contributors: srtfisher
 
 [![Coding Standards](https://github.com/alleyinteractive/cache-collector/actions/workflows/coding-standards.yml/badge.svg)](https://github.com/alleyinteractive/cache-collector/actions/workflows/coding-standards.yml)

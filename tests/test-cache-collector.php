@@ -121,10 +121,12 @@ class Cache_Collector_Test extends Test_Case {
 	public function test_expiration_bumped_when_saved() {
 		$instance = new Cache_Collector( __FUNCTION__ );
 
+		$start_time = time() + 100;
+
 		update_option(
 			$instance->get_storage_name(),
 			[
-				'example-key_:_' => [ time() - Cache_Collector::$expiration_threshold + 1000, 'cache' ],
+				'example-key_:_' => [ $start_time, 'cache' ],
 			]
 		);
 
@@ -136,7 +138,8 @@ class Cache_Collector_Test extends Test_Case {
 
 		$this->assertNotEmpty( $instance->keys() );
 		$this->assertArrayHasKey( 'example-key_:_', $instance->keys() );
-		$this->assertGreaterThan( time() - Cache_Collector::$expiration_threshold, $instance->keys()['example-key_:_'] );
+		$this->assertGreaterThan( $start_time, $instance->keys()['example-key_:_'][0] );
+		$this->assertCount( 1, $instance->keys() );
 	}
 
 	public function test_item_preserved_when_saved() {

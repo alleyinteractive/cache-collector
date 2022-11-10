@@ -45,7 +45,7 @@ class Cache_Collector {
 	 *
 	 * @var string
 	 */
-	public const STORAGE_PREFIX = '_ccollection_';
+	public const STORAGE_PREFIX = '_cache_col_';
 
 	/**
 	 * Threshold in seconds for purging the cache related to a post when a post
@@ -80,11 +80,10 @@ class Cache_Collector {
 	 * @return static
 	 */
 	public static function for_post( WP_Post|int $post, array ...$args ): static {
-		if ( is_int( $post ) ) {
-			return new static( "post-{$post}", ...$args );
-		} else {
-			return new static( "post-{$post->ID}", ...$args );
-		}
+		return new static(
+			$post instanceof WP_Post ? "post-{$post->ID}" : "post-{$post}",
+			...$args,
+		);
 	}
 
 	/**
@@ -95,11 +94,10 @@ class Cache_Collector {
 	 * @return static
 	 */
 	public static function for_term( WP_Term|int $term, array ...$args ) {
-		if ( is_int( $term ) ) {
-			return new static( "term-{$term}", ...$args );
-		} else {
-			return new static( "term-{$term->term_id}", ...$args );
-		}
+		return new static(
+			$term instanceof WP_Term ? "term-{$term->term_id}" : "term-{$term}",
+			...$args,
+		);
 	}
 
 	/**

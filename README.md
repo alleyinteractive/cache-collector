@@ -13,6 +13,16 @@ Contributors: srtfisher
 
 Dynamic cache key collector for easy purging.
 
+A cache key can be related to a post, term, or any other arbitrary string. The
+cache collection "collects" all of the keys related to a post, term, or
+arbitrary string and allows you to purge them all at once.
+
+This can be useful when you have a cache key that is related to a post, term, or
+arbitrary string and you want to purge that cache key when the post or term is
+updated. Another use case is when you have a dynamic cache key and want to purge
+all the cache keys in a collection but can't because your object cache doesn't
+support group purging.
+
 ## Installation
 
 You can install the package via composer:
@@ -23,11 +33,49 @@ composer require alleyinteractive/cache-collector
 
 ## Usage
 
-Activate the plugin in WordPress and use it like so:
+Activate the plugin in WordPress and use the below methods to interface with the
+cache collector.
+
+### Register a Key in a Cache Collection
 
 ```php
-$plugin = Cache_Collector\Cache_Collector\Cache_Collector();
-$plugin->perform_magic();
+cache_collector_register_key( string $collection, string $key );
+```
+
+### Purging a Cache Collection
+
+```php
+cache_collector_purge( string $collection );
+```
+
+### Registering a Key Related to a Post
+
+A post cache collection is a collection of cache keys related to a post. When a
+post is updated, the cache collection is purged. This allows you to purge all of
+the cache keys related to a post at once. A post will only purge the cache
+related to a post if the post was recently updated (within the last week by
+default).
+
+```php
+cache_collector_register_post_key( \WP_Post|int $post, string $key, string $group = '', string $type = 'cache' );
+```
+
+### Purging a Post's Cache Collection
+
+```php
+cache_collector_purge_post( int $post_id );
+```
+
+### Registering a Key Related to a Term
+
+```php
+cache_collector_register_term_key( \WP_Term|int $term, string $key, string $group = '', string $type = 'cache' );
+```
+
+### Purging a Term's Cache Collection
+
+```php
+cache_collector_purge_term( \WP_Term|int $term );
 ```
 
 ## Testing

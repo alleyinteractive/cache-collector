@@ -24,6 +24,8 @@ require_once __DIR__ . '/src/class-cache-collector.php';
  * Instantiate the plugin.
  */
 function cache_collector_setup() {
+	Cache_Collector::register_post_type();
+
 	/**
 	 * Filter the threshold for cache key expiration.
 	 *

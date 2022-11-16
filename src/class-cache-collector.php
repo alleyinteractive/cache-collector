@@ -36,14 +36,6 @@ class Cache_Collector {
 	 * @var string
 	 */
 	public const DELIMITER = '_:_';
-
-	/**
-	 * Prefix for the cache key.
-	 *
-	 * @var string
-	 */
-	// public const STORAGE_PREFIX = '_col_';
-
 	/**
 	 * Post type for storage.
 	 *
@@ -91,6 +83,8 @@ class Cache_Collector {
 	 * @param WP_Post|int $post Post object/ID.
 	 * @param array       ...$args Arguments to pass to the constructor.
 	 * @return static
+	 *
+	 * @throws InvalidArgumentException If the post is invalid.
 	 */
 	public static function for_post( WP_Post|int $post, array ...$args ): static {
 		if ( is_numeric( $post ) ) {
@@ -110,6 +104,8 @@ class Cache_Collector {
 	 * @param WP_Term|int $term Term object/ID.
 	 * @param array       ...$args Arguments to pass to the constructor.
 	 * @return static
+	 *
+	 * @throws InvalidArgumentException If the term is invalid.
 	 */
 	public static function for_term( WP_Term|int $term, array ...$args ) {
 		if ( is_numeric( $term ) ) {
@@ -155,7 +151,7 @@ class Cache_Collector {
 	 * Register the post type for the cache collector.
 	 */
 	public static function register_post_type() {
-		register_post_type(
+		register_post_type( // phpcs:ignore WordPress.NamingConventions.ValidPostTypeSlug.NotStringLiteral
 			static::POST_TYPE,
 			[
 				'public'             => false,
@@ -165,32 +161,62 @@ class Cache_Collector {
 	}
 
 	/**
-	 * Cleanup the cache collector options stored in the database.
+	 * Cleanup the cache collector post stored in the database.
 	 *
-	 * @return void
+	 * Checks if the post is older than the threshold and if so, deletes it. If
+	 * it is not older than the threshold, it will check if the keys in the
+	 * collection it is storing are expired.
 	 */
 	public static function cleanup() {
-		// todo: update.
-		// global $wpdb;
+		$page  = 1;
+		$limit = 100;
 
-		// // Retrieve all options that start with the cache collector prefix.
-		// $keys = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		// 	$wpdb->prepare(
-		// 		"SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
-		// 		$wpdb->esc_like( static::STORAGE_PREFIX ) . '%'
-		// 	)
-		// );
+		while ( true ) {
+			if ( $page > $limit ) {
+				if ( function_exists( 'ai_logger' ) ) {
+					ai_logger()->warning( 'Cache Collector: Reached limit of posts to check.' );
+				}
 
-		// // Run save() on each to remove the expired keys.
-		// foreach ( $keys as $key ) {
-		// 	( new static( substr( $key, strlen( static::STORAGE_PREFIX ) ) ) )->save();
-		// }
+				break;
+			}
+
+			$posts = get_posts( // phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.get_posts_get_posts
+				[
+					'date_query'       => [
+						[
+							'column' => 'post_modified',
+							'before' => gmdate( 'Y-m-d H:i:s', time() - static::$expiration_threshold ),
+						],
+					],
+					'paged'            => $page++,
+					'post_type'        => static::POST_TYPE,
+					'posts_per_page'   => 100,
+					'suppress_filters' => false,
+				]
+			);
+
+			if ( empty( $posts ) ) {
+				break;
+			}
+
+			foreach ( $posts as $post ) {
+				$collection = get_post_meta( $post->ID, '_collection', true );
+
+				if ( empty( $collection ) ) {
+					wp_delete_post( $post->ID, true );
+					continue;
+				}
+
+				( new static( $collection, $post ) )->save();
+			}
+		}
 	}
 
 	/**
 	 * Constructor.
 	 *
 	 * @param string               $collection Cache collection to attach to.
+	 * @param WP_Post|WP_Term|null $parent Object to attach to, optional. Used for storage of the cache collection.
 	 * @param LoggerInterface|null $logger Logger to use.
 	 */
 	public function __construct(
@@ -233,9 +259,6 @@ class Cache_Collector {
 	 * @return static
 	 */
 	public function save() {
-		// Ensure a parent object is set.
-		$this->get_parent_object();
-
 		$keys = $this->keys();
 
 		// Check if any of the existing keys are expired.
@@ -245,8 +268,6 @@ class Cache_Collector {
 			}
 
 			foreach ( $keys[ $type ] as $index => $expiration ) {
-				// [ $key, $cache_group ] = explode( static::DELIMITER, $index );
-
 				// Check if the key is expired and should be removed.
 				if ( $expiration && $expiration < time() ) {
 					unset( $keys[ $type ][ $index ] );
@@ -474,6 +495,9 @@ class Cache_Collector {
 		}
 
 		$this->parent = get_post( $post_id );
+
+		// Store the collection for reference later.
+		update_post_meta( $post_id, '_collection', $this->collection );
 
 		return $this->parent;
 	}

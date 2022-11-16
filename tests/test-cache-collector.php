@@ -332,42 +332,54 @@ class Cache_Collector_Test extends Test_Case {
 		$this->assertInCronQueue( 'cache_collector_cleanup' );
 	}
 
-	// public function test_cleanup_old_keys() {
-	// 	$instance = new Cache_Collector( __FUNCTION__ );
+	public function test_cleanup_old_keys() {
+		$instance = new Cache_Collector( __FUNCTION__ );
 
-	// 	update_option(
-	// 		$instance->get_storage_name(),
-	// 		[
-	// 			'example-key_:_' => [ time() - Cache_Collector::$expiration_threshold - 1000, 'cache' ],
-	// 		]
-	// 	);
+		$parent = $instance->get_parent_object();
 
-	// 	$this->assertNotEmpty( get_option( $instance->get_storage_name() ) );
+		$this->update_post_modified( $parent->ID, gmdate( 'Y-m-d H:i:s', time() - YEAR_IN_SECONDS ) );
 
-	// 	$instance->cleanup();
+		update_post_meta(
+			$parent->ID,
+			Cache_Collector::META_KEY,
+			[
+				'cache' => [
+					'example-key_:_' => time() - Cache_Collector::$expiration_threshold - 1000,
+				],
+			],
+		);
 
-	// 	$this->assertFalse( get_option( $instance->get_storage_name() ) );
-	// }
+		$instance->cleanup();
 
-	// public function test_cleanup_preserve_valid_keys() {
-	// 	$instance = new Cache_Collector( __FUNCTION__ );
+		$parent = get_post( $parent->ID );
 
-	// 	update_option(
-	// 		$instance->get_storage_name(),
-	// 		[
-	// 			// One expired key to purge and one valid to key to preserve.
-	// 			'expired_:_'   => [ time() - Cache_Collector::$expiration_threshold - 1000, 'cache' ],
-	// 			'valid-key_:_' => [ time() + 1000, 'cache' ],
-	// 		]
-	// 	);
+		$this->assertEmpty( $parent );
+	}
 
-	// 	$this->assertNotEmpty( get_option( $instance->get_storage_name() ) );
-	// 	$this->assertCount( 2, $instance->keys() );
+	public function test_cleanup_preserve_valid_keys() {
+		$instance = new Cache_Collector( __FUNCTION__ );
 
-	// 	$instance->save();
+		$parent = $instance->get_parent_object();
 
-	// 	$this->assertNotEmpty( get_option( $instance->get_storage_name() ) );
-	// 	$this->assertCount( 1, $instance->keys() );
-	// 	$this->assertContains( [ 'valid-key', '' ], $instance->keys( true ) );
-	// }
+		$this->update_post_modified( $parent->ID, gmdate( 'Y-m-d H:i:s', time() - YEAR_IN_SECONDS ) );
+
+		update_post_meta(
+			$parent->ID,
+			Cache_Collector::META_KEY,
+			[
+				'cache' => [
+					// One expired key to purge and one valid to key to preserve.
+					'expired_:_'   => time() - Cache_Collector::$expiration_threshold - 1000,
+					'valid-key_:_' => time() + 1000,
+				],
+			]
+		);
+
+		$this->assertCount( 2, $instance->keys()['cache'] );
+
+		$instance->save();
+
+		$this->assertCount( 1, $instance->keys()['cache'] );
+		$this->assertArrayHasKey( 'valid-key_:_', $instance->keys()['cache'] );
+	}
 }

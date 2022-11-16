@@ -373,11 +373,11 @@ class Cache_Collector {
 				}
 
 				// Purge the cache.
-				if ( self::CACHE_OBJECT_CACHE === $type ) {
-					$deleted = wp_cache_delete( $key, $cache_group );
-				} elseif ( self::CACHE_TRANSIENT === $type ) {
-					$deleted = delete_transient( $key );
-				}
+				$deleted = match ( $type ) {
+					static::CACHE_OBJECT_CACHE => wp_cache_delete( $key, $cache_group ),
+					static::CACHE_TRANSIENT => delete_transient( $key ),
+					default => false,
+				};
 
 				if ( $this->logger ) {
 					if ( $deleted ) {
@@ -515,10 +515,9 @@ class Cache_Collector {
 			return;
 		}
 
-		if ( $this->parent instanceof WP_Post ) {
-			update_post_meta( $this->parent->ID, static::META_KEY, $keys );
-		} elseif ( $this->parent instanceof WP_Term ) {
-			update_term_meta( $this->parent->term_id, static::META_KEY, $keys );
-		}
+		match ( $this->parent::class ) {
+			WP_Post::class => update_post_meta( $this->parent->ID, static::META_KEY, $keys ),
+			WP_Term::class => update_term_meta( $this->parent->term_id, static::META_KEY, $keys ),
+		};
 	}
 }

@@ -79,12 +79,14 @@ class Cache_Collector {
 	 */
 	public static function for_post( WP_Post|int $post, array ...$args ): static {
 		if ( is_numeric( $post ) ) {
-			$post = get_post( $post );
+			$post_id = $post;
+			$post    = get_post( $post );
+
+			if ( empty( $post ) ) {
+				throw new InvalidArgumentException( "Invalid post ID: {$post_id}" );
+			}
 		}
 
-		if ( empty( $post ) ) {
-			throw new InvalidArgumentException( 'Invalid post.' );
-		}
 
 		return new static( $post->ID, $post, ...$args );
 	}
@@ -100,12 +102,14 @@ class Cache_Collector {
 	 */
 	public static function for_term( WP_Term|int $term, array ...$args ) {
 		if ( is_numeric( $term ) ) {
-			$term = get_term( $term );
+			$term_id = $term;
+			$term    = get_term( $term );
+
+			if ( empty( $term ) ) {
+				throw new InvalidArgumentException( "Invalid term ID: {$term_id}." );
+			}
 		}
 
-		if ( empty( $term ) ) {
-			throw new InvalidArgumentException( 'Invalid term.' );
-		}
 
 		return new static( $term->term_id, $term, ...$args );
 	}

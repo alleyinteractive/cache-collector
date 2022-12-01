@@ -240,6 +240,13 @@ class Cache_Collector_Test extends Test_Case {
 		$this->assertEmpty( wp_cache_get( 'post-example-key', 'cache-group' ) );
 	}
 
+	public function test_for_post_with_invalid_post_id() {
+		$this->expectException( \InvalidArgumentException::class );
+		$this->expectExceptionMessage( 'Invalid post ID: -100' );
+
+		Cache_Collector::for_post( -100 );
+	}
+
 	public function test_for_post_on_post_update() {
 		$post_id = static::factory()->post->create();
 
@@ -278,6 +285,12 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->purge();
 
 		$this->assertEmpty( wp_cache_get( 'term-example-key', 'cache-group' ) );
+	}
+
+	public function test_for_term_invalid() {
+		$this->expectException( \InvalidArgumentException::class );
+
+		Cache_Collector::for_term( -100 );
 	}
 
 	public function test_for_term_on_term_update() {

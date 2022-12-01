@@ -241,8 +241,6 @@ class Cache_Collector_Test extends Test_Case {
 	}
 
 	public function test_for_post_on_post_update() {
-		$this->expectApplied( 'cache_collector_post_threshold' );
-
 		$post_id = static::factory()->post->create();
 
 		wp_cache_set( 'post-update-key', 'value', 'cache-group' );
@@ -260,32 +258,6 @@ class Cache_Collector_Test extends Test_Case {
 		wp_update_post( [ 'ID' => $post_id ] );
 
 		$this->assertEmpty( wp_cache_get( 'post-update-key', 'cache-group' ) );
-	}
-
-	public function test_for_post_older_than_threshold() {
-		$this->expectApplied( 'cache_collector_post_threshold' );
-
-		$post_id = static::factory()->post->create(
-			[
-				'post_date' => date( 'Y-m-d H:i:s', time() - YEAR_IN_SECONDS ),
-			]
-		);
-
-		wp_cache_set( 'post-update-key', 'value', 'cache-group' );
-
-		$this->assertNotEmpty( wp_cache_get( 'post-update-key', 'cache-group' ) );
-
-		$instance = Cache_Collector::for_post( $post_id );
-
-		$instance->register( 'post-update-key', 'cache-group' );
-
-		$instance->save();
-
-		$this->assertNotEmpty( $instance->keys() );
-
-		wp_update_post( [ 'ID' => $post_id ] );
-
-		$this->assertNotEmpty( wp_cache_get( 'post-update-key', 'cache-group' ) );
 	}
 
 	public function test_for_term() {

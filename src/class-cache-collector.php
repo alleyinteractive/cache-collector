@@ -52,16 +52,6 @@ class Cache_Collector {
 	public const META_KEY = 'cache_collector_keys';
 
 	/**
-	 * Threshold in seconds for purging the cache related to a post when a post
-	 * is updated.
-	 *
-	 * Defaults to 5 days.
-	 *
-	 * @var int
-	 */
-	public static int $post_update_threshold = 432000;
-
-	/**
 	 * Default threshold for a cache key to expire and be removed from the cache
 	 * collector.
 	 *
@@ -121,29 +111,14 @@ class Cache_Collector {
 	}
 
 	/**
-	 * Handle a post update and purge the cache if the post being updated is
-	 * newer than the threshold.
+	 * Handle a post update and purge the cache
 	 *
 	 * @param int $post_id Post ID.
 	 */
 	public static function on_post_update( int $post_id ) {
 		$post = get_post( $post_id );
 
-		if ( ! $post ) {
-			return;
-		}
-
-		$threshold = static::$post_update_threshold;
-
-		/**
-		 * Filters the threshold for cache key expiration.
-		 *
-		 * @param int $threshold Threshold in seconds.
-		 */
-		$threshold = (int) apply_filters( 'cache_collector_post_threshold', $threshold, $post_id );
-
-		// If the post is more recent that the update threshold, purge the cache.
-		if ( get_the_date( 'U', $post ) > ( time() - $threshold ) ) {
+		if ( $post ) {
 			static::for_post( $post )->purge();
 		}
 	}
@@ -298,7 +273,7 @@ class Cache_Collector {
 				[ $key, $group ] = $data;
 
 				// Update the item in the group with the latest timestamp.
-				$keys[ $type ][ $key . static::DELIMITER . $group ] = time() + static::$post_update_threshold;
+				$keys[ $type ][ $key . static::DELIMITER . $group ] = time() + static::$expiration_threshold;
 			}
 		}
 
@@ -486,7 +461,8 @@ class Cache_Collector {
 				'post_status' => 'publish',
 				'post_title'  => $this->get_storage_name(),
 				'post_type'   => static::POST_TYPE,
-			]
+			],
+			true
 		);
 
 		if ( is_wp_error( $post_id ) ) {

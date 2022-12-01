@@ -26,13 +26,6 @@ require_once __DIR__ . '/src/class-cache-collector.php';
 function cache_collector_setup() {
 	Cache_Collector::register_post_type();
 
-	/**
-	 * Filters the threshold for cache key expiration.
-	 *
-	 * @param int $threshold Threshold in seconds.
-	 */
-	Cache_Collector::$post_update_threshold = apply_filters( 'cache_collector_threshold', Cache_Collector::$post_update_threshold );
-
 	// Register the post/term purge actions.
 	add_action( 'clean_post_cache', [ Cache_Collector::class, 'on_post_update' ] );
 	add_action( 'clean_term_cache', [ Cache_Collector::class, 'on_term_update' ] );

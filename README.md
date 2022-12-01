@@ -1,33 +1,35 @@
 # Cache Collector
 
-Stable tag: 0.1.0
-
-Requires at least: 6.0
-
-Tested up to: 6.0
-
-Requires PHP: 8.0
-
-License: GPL v2 or later
-
-Tags: alleyinteractive, cache-collector
-
-Contributors: srtfisher
-
 [![Coding Standards](https://github.com/alleyinteractive/cache-collector/actions/workflows/coding-standards.yml/badge.svg)](https://github.com/alleyinteractive/cache-collector/actions/workflows/coding-standards.yml)
 [![Testing Suite](https://github.com/alleyinteractive/cache-collector/actions/workflows/unit-test.yml/badge.svg)](https://github.com/alleyinteractive/cache-collector/actions/workflows/unit-test.yml)
 
 Dynamic cache key collector for easy purging.
 
-A cache key can be related to a post, term, or any other arbitrary string. The
-cache collection "collects" all of the keys related to a post, term, or
-arbitrary string and allows you to purge them all at once.
+One common problem with large WordPress sites that utilize Memcache is the
+problems that arise when trying to purge cache keys that are dynamically
+generated. For example, if a cache key is the hash of a remote request. You
+would need to calculate the hashed cache key to properly purge it from the
+cache. Another common problem would be trying to purge all the cache keys in a
+specific group (Memcache doesn't support group purging).
 
-This can be useful when you have a cache key that is related to a post, term, or
-arbitrary string and you want to purge that cache key when the post or term is
-updated. Another use case is when you have a dynamic cache key and want to purge
-all the cache keys in a collection but can't because your object cache doesn't
-support group purging.
+Cache Collector solves for this by storing cache/transient keys in collections
+in WordPress. These collections can then be purged in a single command. Here's a
+real-world use case:
+
+When viewing a post, the post's related posts are fetched from a remote source
+and displayed to the user. This operation is expensive due to the remote request
+and needs to be cached. When the post is updated, the related post cache needs
+to be flushed as well.
+
+Enter Cache Collector. When the post is updated, the related post cache key is
+added to a collection. When the post is updated, the cache key that is connected
+to the post will automatically be purged.
+
+To flip this around, say the remote data source is having issues and you need to
+flush all the related post cache keys. You can do this by purging the "related
+posts" cache collection. This stores all the cache keys for all related posts.
+In one command you can purge an entire cache group without having to calculate
+the cache key for each.
 
 ## Installation
 

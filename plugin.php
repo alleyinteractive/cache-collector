@@ -27,7 +27,7 @@ function cache_collector_setup() {
 	Cache_Collector::register_post_type();
 
 	/**
-	 * Filter the threshold for cache key expiration.
+	 * Filters the threshold for cache key expiration.
 	 *
 	 * @param int $threshold Threshold in seconds.
 	 */
@@ -44,7 +44,7 @@ function cache_collector_setup() {
 		},
 	);
 
-	// Setup a cleanup task that runs once a day to cleanup any expired keys and
+	// Set up a cleanup task that runs once a day to clean up any expired keys and
 	// delete any unused options.
 	if ( ! wp_next_scheduled( 'cache_collector_cleanup' ) ) {
 		wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'cache_collector_cleanup' );
@@ -65,8 +65,8 @@ cache_collector_setup();
  * Register a cache key for a collection.
  *
  * @param string $collection Collection name.
- * @param string $key Cache key.
- * @param string $type Cache type.
+ * @param string $key        Cache key.
+ * @param string $type       Cache type.
  * @return Cache_Collector
  */
 function cache_collector_register_key( string $collection, string $key, string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {
@@ -76,10 +76,10 @@ function cache_collector_register_key( string $collection, string $key, string $
 /**
  * Register a cache key for a post.
  *
- * @param int|\WP_Post $post Post ID or object.
- * @param string       $key Cache key.
+ * @param int|\WP_Post $post  Post ID or object.
+ * @param string       $key   Cache key.
  * @param string       $group Cache group, optional.
- * @param string       $type Cache type, optional.
+ * @param string       $type  Cache type, optional.
  * @return Cache_Collector
  */
 function cache_collector_register_post_key( \WP_Post|int $post, string $key, string $group = '', string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {
@@ -89,10 +89,10 @@ function cache_collector_register_post_key( \WP_Post|int $post, string $key, str
 /**
  * Register a cache key for a term.
  *
- * @param int|\WP_Term $term Term ID or object.
- * @param string       $key Cache key.
+ * @param int|\WP_Term $term  Term ID or object.
+ * @param string       $key   Cache key.
  * @param string       $group Cache group, optional.
- * @param string       $type Cache type, optional.
+ * @param string       $type  Cache type, optional.
  * @return Cache_Collector
  */
 function cache_collector_register_term_key( \WP_Term|int $term, string $key, string $group = '', string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {

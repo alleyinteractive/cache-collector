@@ -34,15 +34,8 @@ function cache_collector_setup() {
 	Cache_Collector::$post_update_threshold = apply_filters( 'cache_collector_threshold', Cache_Collector::$post_update_threshold );
 
 	// Register the post/term purge actions.
-	add_action( 'clean_post_cache', fn ( $post_id ) => Cache_Collector::on_post_update( $post_id ) );
-	add_action(
-		'clean_term_cache',
-		function ( $term_ids ) {
-			foreach ( $term_ids as $term_id ) {
-				Cache_Collector::for_term( $term_id )->purge();
-			}
-		},
-	);
+	add_action( 'clean_post_cache', [ Cache_Collector::class, 'on_post_update' ] );
+	add_action( 'clean_term_cache', [ Cache_Collector::class, 'on_term_update' ] );
 
 	// Set up a cleanup task that runs once a day to clean up any expired keys and
 	// delete any unused options.
@@ -50,13 +43,13 @@ function cache_collector_setup() {
 		wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'cache_collector_cleanup' );
 	}
 
-	add_action( 'cache_collector_cleanup', fn () => Cache_Collector::cleanup() );
+	add_action( 'cache_collector_cleanup', [ Cache_Collector::class, 'cleanup' ] );
 
 	// Register the WP-CLI command.
 	if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		require_once __DIR__ . '/src/class-cli.php';
 
-		\WP_CLI::add_command( 'cache-collector', 'Cache_Collector\CLI' );
+		\WP_CLI::add_command( 'cache-collector', \Cache_Collector\CLI::class );
 	}
 }
 cache_collector_setup();

@@ -36,6 +36,7 @@ class Cache_Collector {
 	 * @var string
 	 */
 	public const DELIMITER = '_:_';
+
 	/**
 	 * Post type for storage.
 	 *
@@ -80,7 +81,7 @@ class Cache_Collector {
 	/**
 	 * Create a new Cache_Collector instance for a post.
 	 *
-	 * @param WP_Post|int $post Post object/ID.
+	 * @param WP_Post|int $post    Post object/ID.
 	 * @param array       ...$args Arguments to pass to the constructor.
 	 * @return static
 	 *
@@ -101,7 +102,7 @@ class Cache_Collector {
 	/**
 	 * Create a new Cache_Collector instance for a term.
 	 *
-	 * @param WP_Term|int $term Term object/ID.
+	 * @param WP_Term|int $term    Term object/ID.
 	 * @param array       ...$args Arguments to pass to the constructor.
 	 * @return static
 	 *
@@ -135,15 +136,26 @@ class Cache_Collector {
 		$threshold = static::$post_update_threshold;
 
 		/**
-		 * Filter the threshold for cache key expiration.
+		 * Filters the threshold for cache key expiration.
 		 *
 		 * @param int $threshold Threshold in seconds.
 		 */
 		$threshold = (int) apply_filters( 'cache_collector_post_threshold', $threshold, $post_id );
 
-		// If the post is newer than the threshold, purge the cache.
+		// If the post is more recent that the update threshold, purge the cache.
 		if ( get_the_date( 'U', $post ) > ( time() - $threshold ) ) {
 			static::for_post( $post )->purge();
+		}
+	}
+
+	/**
+	 * Handle a term update and purge the cache for the term.
+	 *
+	 * @param int[] $ids Term ID.
+	 */
+	public static function on_term_update( array $ids ) {
+		foreach ( $ids as $id ) {
+			static::for_term( $id )->purge();
 		}
 	}
 
@@ -161,7 +173,7 @@ class Cache_Collector {
 	}
 
 	/**
-	 * Cleanup the cache collector post stored in the database.
+	 * Clean up the cache collector post stored in the database.
 	 *
 	 * Checks if the post is older than the threshold and if so, deletes it. If
 	 * it is not older than the threshold, it will check if the keys in the
@@ -184,7 +196,7 @@ class Cache_Collector {
 				[
 					'date_query'       => [
 						[
-							'column' => 'post_modified',
+							'column' => 'post_modified_gmt',
 							'before' => gmdate( 'Y-m-d H:i:s', time() - static::$expiration_threshold ),
 						],
 					],
@@ -216,8 +228,8 @@ class Cache_Collector {
 	 * Constructor.
 	 *
 	 * @param string               $collection Cache collection to attach to.
-	 * @param WP_Post|WP_Term|null $parent Object to attach to, optional. Used for storage of the cache collection.
-	 * @param LoggerInterface|null $logger Logger to use.
+	 * @param WP_Post|WP_Term|null $parent     Object to attach to, optional. Used for storage of the cache collection.
+	 * @param LoggerInterface|null $logger     Logger to use.
 	 */
 	public function __construct(
 		public string $collection,
@@ -285,12 +297,8 @@ class Cache_Collector {
 			foreach ( $this->pending_keys[ $type ] as $data ) {
 				[ $key, $group ] = $data;
 
-				if ( isset( $keys[ $type ][ $key . static::DELIMITER . $group ] ) ) {
-					// Update the expiration if the key is already registered.
-					$keys[ $type ][ $key . static::DELIMITER . $group ] = time() + static::$post_update_threshold;
-				} else {
-					$keys[ $type ][ $key . static::DELIMITER . $group ] = time() + static::$post_update_threshold;
-				}
+				// Update the item in the group with the latest timestamp.
+				$keys[ $type ][ $key . static::DELIMITER . $group ] = time() + static::$post_update_threshold;
 			}
 		}
 
@@ -368,7 +376,10 @@ class Cache_Collector {
 
 				// Check if the key is expired and should be removed.
 				if ( $expiration && $expiration < time() ) {
+					$dirty = true;
+
 					unset( $keys[ $type ][ $index ] );
+
 					continue;
 				}
 
@@ -451,12 +462,12 @@ class Cache_Collector {
 
 		$post = get_posts( // phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.get_posts_get_posts
 			[
-				'name'            => $this->get_storage_name(),
-				'no_found_rows'   => true,
-				'post_status'     => 'publish',
-				'post_type'       => static::POST_TYPE,
-				'posts_per_page'  => 1,
-				'suppress_filter' => false,
+				'name'             => $this->get_storage_name(),
+				'no_found_rows'    => true,
+				'post_status'      => 'publish',
+				'post_type'        => static::POST_TYPE,
+				'posts_per_page'   => 1,
+				'suppress_filters' => false,
 			]
 		);
 
@@ -469,7 +480,7 @@ class Cache_Collector {
 			return null;
 		}
 
-		$post_id = wp_insert_post( // phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_insert_post_wp_insert_post
+		$post_id = wp_insert_post(
 			[
 				'post_name'   => $this->get_storage_name(),
 				'post_status' => 'publish',

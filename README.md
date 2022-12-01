@@ -59,10 +59,10 @@ cache_collector_purge( string $collection );
 ### Registering a Key Related to a Post
 
 A post cache collection is a collection of cache keys related to a post. When a
-post is updated, the cache collection is purged. This allows you to purge all of
-the cache keys related to a post at once. A post will only purge the cache
-related to a post if the post was recently updated (within the last week by
-default).
+post is updated, the post's cache collection is purged. This allows you to purge
+all of the cache keys related to a post at once. A post will only purge the
+cache related to a post if the post was recently updated (within the last week
+by default).
 
 ```php
 cache_collector_register_post_key( \WP_Post|int $post, string $key, string $group = '', string $type = 'cache' );

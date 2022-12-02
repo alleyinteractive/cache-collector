@@ -80,7 +80,7 @@ class Cache_Collector {
 		}
 
 
-		return new static( $post->ID, $post, ...$args );
+		return new static( "post-{$post->ID}", $post, ...$args );
 	}
 
 	/**
@@ -103,7 +103,7 @@ class Cache_Collector {
 		}
 
 
-		return new static( $term->term_id, $term, ...$args );
+		return new static( "term-{$term->term_id}", $term, ...$args );
 	}
 
 	/**

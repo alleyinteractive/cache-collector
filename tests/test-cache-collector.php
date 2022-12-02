@@ -20,7 +20,7 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys()['cache'] ?? [] );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys()['cache'] );
 		$this->assertCount( 1, $instance->keys()['cache'] ?? [] );
 	}
 
@@ -30,7 +30,7 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys()['cache'] ?? [] );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys()['cache'] );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys()['cache'] );
 		$this->assertCount( 1, $instance->keys()['cache'] );
 	}
 
@@ -49,9 +49,9 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys()['cache'] );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys()['cache'] );
-		$this->assertArrayHasKey( 'example-key-2_:_', $instance->keys()['cache'] );
-		$this->assertArrayHasKey( 'example-key-3_:_cache-group', $instance->keys()['cache'] );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys()['cache'] );
+		$this->assertContains( [ 'example-key-2', '' ], $instance->keys()['cache'] );
+		$this->assertContains( [ 'example-key-3', 'cache-group' ], $instance->keys()['cache'] );
 		$this->assertCount( 3, $instance->keys()['cache'] );
 		$this->assertCount( 1, $instance->keys() );
 	}
@@ -68,18 +68,18 @@ class Cache_Collector_Test extends Test_Case {
 			->register( 'example-key-2' )
 			->register( 'example-key-3', 'cache-group' )
 			->register( 'example-key-3', 'cache-group' )
-			->register( 'example_transient', '', 'transient' );
+			->register( 'example_transient', '', 0, 'transient' );
 
 		$this->assertEmpty( $instance->keys() );
 
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys()['cache'] ?? [] );
-		$this->assertArrayHasKey( 'example-key-2_:_', $instance->keys()['cache'] ?? [] );
-		$this->assertArrayHasKey( 'example-key-3_:_cache-group', $instance->keys()['cache'] ?? [] );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys()['cache'] );
+		$this->assertContains( [ 'example-key-2', '' ], $instance->keys()['cache'] );
+		$this->assertContains( [ 'example-key-3', 'cache-group' ], $instance->keys()['cache'] );
 		$this->assertCount( 3, $instance->keys()['cache'] );
-		$this->assertArrayHasKey( 'example_transient_:_', $instance->keys()['transient'] ?? [] );
+		$this->assertContains( [ 'example_transient', '' ], $instance->keys()['transient'] );
 		$this->assertCount( 2, $instance->keys() );
 	}
 
@@ -93,7 +93,7 @@ class Cache_Collector_Test extends Test_Case {
 			Cache_Collector::META_KEY,
 			[
 				'cache' => [
-					'example-key_:_' => time() - Cache_Collector::$expiration_threshold - 1000,
+					'example-key_:_' => time() - 100,
 				],
 			],
 		);
@@ -115,21 +115,21 @@ class Cache_Collector_Test extends Test_Case {
 			Cache_Collector::META_KEY,
 			[
 				'cache' => [
-					'example-key_:_' => time() - Cache_Collector::$expiration_threshold - 1000,
+					'example-key_:_' => time() - 1000,
 				],
 			],
 		);
 
 		$this->assertNotEmpty( $instance->keys() );
 
-		$instance->register( 'another-key' );
+		$instance->register( 'another-key', '', 100 );
 
 		$this->assertNotEmpty( $instance->keys() );
 
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'another-key_:_', $instance->keys()['cache'] ?? [] );
+		$this->assertContains( [ 'another-key', '' ], $instance->keys()['cache'] );
 		$this->assertCount( 1, $instance->keys()['cache'] );
 	}
 
@@ -156,8 +156,8 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys() );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys()['cache'] ?? [] );
-		$this->assertGreaterThan( $start_time, $instance->keys()['cache']['example-key_:_'] );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys()['cache'] );
+		$this->assertGreaterThan( $start_time, $instance->keys()['cache'][0] );
 		$this->assertCount( 1, $instance->keys()['cache'] );
 	}
 
@@ -171,7 +171,7 @@ class Cache_Collector_Test extends Test_Case {
 			Cache_Collector::META_KEY,
 			[
 				'cache' => [
-					'example-key_:_' => time() + 100,
+					'example-key_:_' => time() + 1000,
 				],
 			],
 		);
@@ -181,7 +181,7 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertNotEmpty( $instance->keys()['cache'] );
-		$this->assertArrayHasKey( 'example-key_:_', $instance->keys()['cache'] );
+		$this->assertContains( [ 'example-key', '' ], $instance->keys()['cache'] );
 	}
 
 	public function test_key_saved_on_destruct() {
@@ -329,7 +329,8 @@ class Cache_Collector_Test extends Test_Case {
 			Cache_Collector::META_KEY,
 			[
 				'cache' => [
-					'example-key_:_' => time() - Cache_Collector::$expiration_threshold - 1000,
+					// This key should be removed because it is expired.
+					'example-key_:_' => time() - 1000,
 				],
 			],
 		);
@@ -354,7 +355,7 @@ class Cache_Collector_Test extends Test_Case {
 			[
 				'cache' => [
 					// One expired key to purge and one valid to key to preserve.
-					'expired_:_'   => time() - Cache_Collector::$expiration_threshold - 1000,
+					'expired_:_'   => time() - 1000,
 					'valid-key_:_' => time() + 1000,
 				],
 			]
@@ -365,6 +366,6 @@ class Cache_Collector_Test extends Test_Case {
 		$instance->save();
 
 		$this->assertCount( 1, $instance->keys()['cache'] );
-		$this->assertArrayHasKey( 'valid-key_:_', $instance->keys()['cache'] );
+		$this->assertContains( [ 'valid-key', '' ], $instance->keys()['cache'] );
 	}
 }

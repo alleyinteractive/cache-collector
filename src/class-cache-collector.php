@@ -52,15 +52,7 @@ class Cache_Collector {
 	public const META_KEY = 'cache_collector_keys';
 
 	/**
-	 * Default threshold for a cache key to expire and be removed from the cache
-	 * collector.
-	 *
-	 * @var integer
-	 */
-	public static int $expiration_threshold = 432000;
-
-	/**
-	 * Keys to be registered with the collector.
+	 * Pending keys to be registered with the collector.
 	 *
 	 * Array of arrays with the key and group as the values.
 	 *
@@ -106,7 +98,7 @@ class Cache_Collector {
 			$term    = get_term( $term );
 
 			if ( empty( $term ) ) {
-				throw new InvalidArgumentException( "Invalid term ID: {$term_id}." );
+				throw new InvalidArgumentException( "Invalid term ID: {$term_id}" );
 			}
 		}
 
@@ -165,7 +157,12 @@ class Cache_Collector {
 		while ( true ) {
 			if ( $page > $limit ) {
 				if ( function_exists( 'ai_logger' ) ) {
-					ai_logger()->warning( 'Cache Collector: Reached limit of posts to check.' );
+					ai_logger()->warning(
+						'Cache Collector: Reached limit of posts to check.',
+						[
+							'context' => 'cache-collector',
+						]
+					);
 				}
 
 				break;
@@ -176,7 +173,7 @@ class Cache_Collector {
 					'date_query'       => [
 						[
 							'column' => 'post_modified_gmt',
-							'before' => gmdate( 'Y-m-d H:i:s', time() - static::$expiration_threshold ),
+							'before' => gmdate( 'Y-m-d H:i:s', time() - ( DAY_IN_SECONDS * 7 ) ),
 						],
 					],
 					'paged'            => $page++,
@@ -231,14 +228,27 @@ class Cache_Collector {
 	 *
 	 * @param string $key   Cache key to register.
 	 * @param string $group Cache group to use, optional.
-	 * @param string $type  Type of cache, optional (cache/transient).
+	 * @param int    $ttl   Time to live for the cache key in seconds, optional. Default 0 (no expiration).
+	 * @param string $type  Type of cache (cache/transient), optional. Defaults to cache.
 	 * @return static
+	 *
+	 * @throws InvalidArgumentException If the cache key is invalid.
+	 * @throws InvalidArgumentException If the cache type is invalid.
 	 */
-	public function register( string $key, string $group = '', string $type = self::CACHE_OBJECT_CACHE ) {
-		$pending_key = [ $key, $group ];
+	public function register( string $key, string $group = '', int $ttl = 0, string $type = self::CACHE_OBJECT_CACHE ) {
+		if ( empty( $key ) ) {
+			throw new InvalidArgumentException( 'Cache key cannot be empty.' );
+		}
 
-		if ( ! in_array( $pending_key, $this->pending_keys[ $type ] ?? [], true ) ) {
-			$this->pending_keys[ $type ][] = $pending_key;
+		if ( ! in_array( $type, [ self::CACHE_OBJECT_CACHE, self::CACHE_TRANSIENT ], true ) ) {
+			throw new InvalidArgumentException( "Invalid cache type: {$type}." );
+		}
+
+		$pending_key = $key . static::DELIMITER . $group;
+
+		// Include the pending key for registration.
+		if ( ! isset( $this->pending_keys[ $type ][ $pending_key ] ) ) {
+			$this->pending_keys[ $type ][ $pending_key ] = $ttl;
 		}
 
 		return $this;
@@ -250,18 +260,20 @@ class Cache_Collector {
 	 * @return static
 	 */
 	public function save() {
-		$keys = $this->keys();
+		$storage = $this->get_storage();
+
+		$original = $storage;
 
 		// Check if any of the existing keys are expired.
 		foreach ( [ static::CACHE_OBJECT_CACHE, static::CACHE_TRANSIENT ] as $type ) {
-			if ( empty( $keys[ $type ] ) ) {
+			if ( empty( $storage[ $type ] ) ) {
 				continue;
 			}
 
-			foreach ( $keys[ $type ] as $index => $expiration ) {
+			foreach ( $storage[ $type ] as $index => $expiration ) {
 				// Check if the key is expired and should be removed.
-				if ( $expiration && $expiration < time() ) {
-					unset( $keys[ $type ][ $index ] );
+				if ( $expiration < time() ) {
+					unset( $storage[ $type ][ $index ] );
 					continue;
 				}
 			}
@@ -273,24 +285,21 @@ class Cache_Collector {
 				continue;
 			}
 
-			foreach ( $this->pending_keys[ $type ] as $data ) {
-				[ $key, $group ] = $data;
-
-				// Update the item in the group with the latest timestamp.
-				$keys[ $type ][ $key . static::DELIMITER . $group ] = time() + static::$expiration_threshold;
+			foreach ( $this->pending_keys[ $type ] as $key_and_group => $ttl ) {
+				$storage[ $type ][ $key_and_group ] = time() + $ttl;
 			}
 		}
 
-		// Ensure the keys have a valid value before saving.
-		$keys = array_filter( $keys );
+		// Clear out any empty cache types.
+		$storage = array_filter( $storage );
 
-		if ( ! empty( $keys ) ) {
-			$this->store_keys( $keys );
+		if ( ! empty( $storage ) && $storage !== $original ) {
+			$this->store_keys( $storage );
 
 			if ( $this->logger ) {
-				$this->logger->info( 'Saved cache collection option for ' . $this->get_storage_name(), [ 'keys' => $keys ] );
+				$this->logger->info( 'Saved cache collection option for ' . $this->get_storage_name(), [ 'keys' => $storage ] );
 			}
-		} else {
+		} elseif ( empty( $storage ) ) {
 			// Delete the parent object if there are no keys and if the parent
 			// is a cache collection post.
 			if ( $this->parent instanceof WP_Post && static::POST_TYPE === $this->parent->post_type ) {
@@ -311,20 +320,28 @@ class Cache_Collector {
 	/**
 	 * Retrieve all the stored keys for the collector group.
 	 *
-	 * @return array<string, array<string, int>>
+	 * Returns an array of cache types and the subsequent keys/group pairings.
+	 * Does not include the cache expiration.
+	 *
+	 * @return array<string, array<array<int, string>>>
 	 */
 	public function keys(): array {
-		if ( $this->parent ) {
-			$keys = match ( $this->parent::class ) {
-				WP_Post::class => get_post_meta( $this->parent->ID, static::META_KEY, true ),
-				WP_Term::class => get_term_meta( $this->parent->term_id, static::META_KEY, true ),
-				default => [],
-			};
+		$storage = $this->get_storage();
 
-			return is_array( $keys ) ? $keys : [];
+		if ( empty( $storage ) ) {
+			return [];
 		}
 
-		return [];
+		$collection = [];
+
+		foreach ( $storage as $type => $keys ) {
+			$collection[ $type ] = array_map(
+				fn ( string $key ) => explode( static::DELIMITER, $key ),
+				array_keys( $keys )
+			);
+		}
+
+		return $collection;
 	}
 
 	/**
@@ -333,9 +350,9 @@ class Cache_Collector {
 	 * @return static
 	 */
 	public function purge() {
-		$keys = $this->keys();
+		$storage = $this->get_storage();
 
-		if ( empty( $keys ) ) {
+		if ( empty( $storage ) ) {
 			if ( $this->logger ) {
 				$this->logger->info( 'No keys to purge for ' . $this->get_storage_name() );
 			}
@@ -346,18 +363,18 @@ class Cache_Collector {
 		$dirty = false;
 
 		foreach ( [ static::CACHE_OBJECT_CACHE, static::CACHE_TRANSIENT ] as $type ) {
-			if ( empty( $keys[ $type ] ) ) {
+			if ( empty( $storage[ $type ] ) ) {
 				continue;
 			}
 
-			foreach ( $keys[ $type ] as $index => $expiration ) {
+			foreach ( $storage[ $type ] as $index => $expiration ) {
 				[ $key, $cache_group ] = explode( static::DELIMITER, $index );
 
 				// Check if the key is expired and should be removed.
 				if ( $expiration && $expiration < time() ) {
 					$dirty = true;
 
-					unset( $keys[ $type ][ $index ] );
+					unset( $storage[ $type ][ $index ] );
 
 					continue;
 				}
@@ -405,7 +422,7 @@ class Cache_Collector {
 
 		// Update the keys if any were removed.
 		if ( $dirty ) {
-			$this->store_keys( $keys );
+			$this->store_keys( $storage );
 		}
 
 		return $this;
@@ -491,6 +508,27 @@ class Cache_Collector {
 		update_post_meta( $post_id, '_collection', $this->collection );
 
 		return $this->parent;
+	}
+
+	/**
+	 * Retrieve the keys for the collection from storage.
+	 *
+	 * Not intended for public API usage {@see Cache_Collector::keys()}.
+	 *
+	 * @return array
+	 */
+	protected function get_storage(): array {
+		if ( $this->parent ) {
+			$keys = match ( $this->parent::class ) {
+				WP_Post::class => get_post_meta( $this->parent->ID, static::META_KEY, true ),
+				WP_Term::class => get_term_meta( $this->parent->term_id, static::META_KEY, true ),
+				default => [],
+			};
+
+			return is_array( $keys ) ? $keys : [];
+		}
+
+		return [];
 	}
 
 	/**

@@ -52,7 +52,7 @@ cache collector.
 only be done when the cache/transient is stored. When the key is stored the
 system will set an expiration date for the key to be eventually purged from the
 collection if unused. To prevent continually updating the keys in the collection
-(and degradation site performance), the key should only be registered when the
+and degrading site performance, the key should only be registered when the
 cache/transient is stored. Cache Collector will eventually remove the key from
 the collection when it expires.
 

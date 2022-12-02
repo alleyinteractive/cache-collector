@@ -51,12 +51,39 @@ cache_collector_setup();
  * Register a cache key for a collection.
  *
  * @param string $collection Collection name.
- * @param string $key        Cache key.
- * @param string $type       Cache type.
+ * @param string $key        Cache key to register.
+ * @param string $group      Cache group, optional.
+ * @param int    $ttl        Expiration time in seconds, optional. Defaults to 0 (no expiration).
+ * @param string $type       Type of cache (cache/transient), optional. Defaults to cache.
  * @return Cache_Collector
  */
-function cache_collector_register_key( string $collection, string $key, string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {
-	return ( new Cache_Collector( $collection ) )->register( $key );
+function cache_collector_register_key( string $collection, string $key, string $group = '', int $ttl = 0, string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {
+	return ( new Cache_Collector( $collection ) )->register( $key, $group, $ttl, $type );
+}
+
+/**
+ * Register a transient key for a collection.
+ *
+ * @param string $collection Collection name.
+ * @param string $transient  Transient key to register.
+ * @param int    $ttl        Expiration time in seconds, optional. Defaults to 0 (no expiration).
+ * @return Cache_Collector
+ */
+function cache_collector_register_transient_key( string $collection, string $transient, int $ttl = 0 ): Cache_Collector {
+	return cache_collector_register_key( $collection, $transient, '', $ttl, Cache_Collector::CACHE_TRANSIENT );
+}
+
+/**
+ * Register a cache key for a collection.
+ *
+ * @param string $collection Collection name.
+ * @param string $key        Cache key to register.
+ * @param string $group      Cache group, optional.
+ * @param int    $ttl        Expiration time in seconds, optional. Defaults to 0 (no expiration).
+ * @return Cache_Collector
+ */
+function cache_collector_register_cache_key( string $collection, string $key, string $group = '', int $ttl = 0 ): Cache_Collector {
+	return cache_collector_register_key( $collection, $key, $group, $ttl, Cache_Collector::CACHE_OBJECT_CACHE );
 }
 
 /**
@@ -65,11 +92,12 @@ function cache_collector_register_key( string $collection, string $key, string $
  * @param int|\WP_Post $post  Post ID or object.
  * @param string       $key   Cache key.
  * @param string       $group Cache group, optional.
- * @param string       $type  Cache type, optional.
+ * @param int          $ttl   Expiration time in seconds, optional. Defaults to 0 (no expiration).
+ * @param string       $type  Type of cache (cache/transient), optional. Defaults to cache.
  * @return Cache_Collector
  */
-function cache_collector_register_post_key( \WP_Post|int $post, string $key, string $group = '', string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {
-	return Cache_Collector::for_post( $post )->register( $key, $group, $type );
+function cache_collector_register_post_key( \WP_Post|int $post, string $key, string $group = '', int $ttl = 0, string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {
+	return Cache_Collector::for_post( $post )->register( $key, $group, $ttl, $type );
 }
 
 /**
@@ -78,11 +106,12 @@ function cache_collector_register_post_key( \WP_Post|int $post, string $key, str
  * @param int|\WP_Term $term  Term ID or object.
  * @param string       $key   Cache key.
  * @param string       $group Cache group, optional.
+ * @param int          $ttl   Expiration time in seconds, optional. Defaults to 0 (no expiration).
  * @param string       $type  Cache type, optional.
  * @return Cache_Collector
  */
-function cache_collector_register_term_key( \WP_Term|int $term, string $key, string $group = '', string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {
-	return Cache_Collector::for_term( $term )->register( $key, $group, $type );
+function cache_collector_register_term_key( \WP_Term|int $term, string $key, string $group = '', int $ttl = 0, string $type = Cache_Collector::CACHE_OBJECT_CACHE ): Cache_Collector {
+	return Cache_Collector::for_term( $term )->register( $key, $group, $ttl, $type );
 }
 
 /**

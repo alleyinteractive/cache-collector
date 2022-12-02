@@ -49,10 +49,30 @@ cache collector.
 ### Register a Key in a Cache Collection
 
 ```php
-cache_collector_register_key( string $collection, string $key );
+cache_collector_register_key( string $collection, string $key, string $group = '', int $ttl = 0, string $type = 'cache' );
+
+// Example using named arguments.
+cache_collector_register_key(
+	collection: 'related_posts',
+	key: $related_posts_cache_key,
+	group: 'related_posts',
+	ttl: 3600,
+	type: 'cache',
+);
+```
+
+The plugin also provides `cache_collector_register_transient_key()` and
+`cache_collector_register_cache_key()` to make it easier to register keys for a
+transient/cache without having to specify the `$type` argument.
+
+```php
+cache_collector_register_transient_key( string $collection, string $transient, int $ttl = 0 );
+cache_collector_register_cache_key( string $collection, string $key, string $group = '', int $ttl = 0 );
 ```
 
 ### Purging a Cache Collection
+
+Purge all the cache entries in a collection.
 
 ```php
 cache_collector_purge( string $collection );
@@ -66,21 +86,36 @@ allows you to purge all of the cache keys related to a post at once.
 
 ```php
 cache_collector_register_post_key( \WP_Post|int $post, string $key, string $group = '', string $type = 'cache' );
+
+// Example using named arguments.
+cache_collector_register_post_key(
+	post: $post,
+	key: $related_posts_cache_key,
+	group: 'related_posts',
+	type: 'cache',
+);
 ```
 
 ### Purging a Post's Cache Collection
 
-Purge a cache collection related to a post regardless of the post's last
-updated time.
+Purge a cache collection related to a post.
 
 ```php
-cache_collector_purge_post( int $post_id );
+cache_collector_purge_post( \WP_Post|int $post_id );
 ```
 
 ### Registering a Key Related to a Term
 
 ```php
 cache_collector_register_term_key( \WP_Term|int $term, string $key, string $group = '', string $type = 'cache' );
+
+// Example using named arguments.
+cache_collector_register_term_key(
+	term: $term,
+	key: $related_posts_cache_key,
+	group: 'related_posts',
+	type: 'cache',
+);
 ```
 
 ### Purging a Term's Cache Collection

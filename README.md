@@ -53,7 +53,7 @@ only be done when the cache/transient is stored. When the key is stored the
 system will set an expiration date for the key to be eventually purged from the
 collection if unused. To prevent continually updating the keys in the collection
 and degrading site performance, the key should only be registered when the
-cache/transient is stored. Cache Collector will eventually remove the key from
+cache/transient is stored. The cache collector will eventually remove the key from
 the collection when it expires.
 
 TL;DR: Register the key only when the cache/transient is stored. Don't register
@@ -135,6 +135,35 @@ cache_collector_register_term_key(
 
 ```php
 cache_collector_purge_term( \WP_Term|int $term );
+```
+
+## Full Example
+
+The following example shows how to use the cache collector to register a cache
+key for future purging.
+
+```php
+$arguments = [
+	'limit' => 100,
+	'term' => '...',
+	'fields' => [ ... ],
+];
+
+$data = wp_cache_get( md5( $arguments ), 'my_cache_group' );
+
+if ( false === $data ) {
+	$data = remote_data_fetch( $arguments );
+	wp_cache_set( md5( $arguments ), $data, 'my_cache_group' );
+
+	// Register the cache key for the collection.
+	cache_collector_register_cache_key( 'my_collection', md5( $arguments ), 'my_cache_group' );
+}
+```
+
+Now we can purge the cache collection whenever we need to:
+
+```php
+cache_collector_purge( 'my_collection' );
 ```
 
 ## Testing

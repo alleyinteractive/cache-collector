@@ -166,6 +166,12 @@ Now we can purge the cache collection whenever we need to:
 cache_collector_purge( 'my_collection' );
 ```
 
+We can also purge this with the WP-CLI command included with the plugin:
+
+```bash
+wp cache-collector purge my_collection
+```
+
 ## Testing
 
 Run `composer test` to run tests against PHPUnit and the PHP code in the plugin.

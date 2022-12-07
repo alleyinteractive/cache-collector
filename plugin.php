@@ -24,7 +24,7 @@ require_once __DIR__ . '/src/class-cache-collector.php';
  * Instantiate the plugin.
  */
 function cache_collector_setup() {
-	Cache_Collector::register_post_type();
+	add_action( 'init', [ Cache_Collector::class, 'register_post_type' ] );
 
 	// Register the post/term purge actions.
 	add_action( 'clean_post_cache', [ Cache_Collector::class, 'on_post_update' ] );
